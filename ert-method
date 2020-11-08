@@ -1,0 +1,213 @@
+#include <iostream>
+#include <math.h>
+
+using namespace std;
+
+double silnia(int value)
+{
+    if(value==0) return 1;
+    else return value*silnia(value-1);
+}
+
+double suma(double A,double V)
+{
+    int i=0;
+    double result=0;
+    while(i<=V)
+    {
+        result+=pow(A,i)/silnia(i);
+        i++;
+    }
+    return result;
+}
+
+double Erlang(double A,double V)
+{
+    return ((pow(A,V)/silnia(V))/suma(A,V));
+}
+
+class Primary_Bundle
+{
+    double A,V;
+    double R,D;
+
+public:
+    Primary_Bundle(double a,double v):A(a),V(v)
+    {
+        R=A*Erlang(A,V);
+        D=R*((A/(V+1-A+R))-R);
+    }
+
+    double getA()
+    {
+        return A;
+    }
+
+    double getV()
+    {
+        return V;
+    }
+
+    double getR()
+    {
+        return R;
+    }
+
+    double getD()
+    {
+        return D;
+    }
+};
+
+class Secondary_Bundle
+{
+private:
+    double A,V,V_ob_0,V_ob_1;
+    double R,D,Z,B,B_ob;
+    double sigma2;
+
+public:
+    Secondary_Bundle(double R_sum,double D_sum):R(R_sum),D(D_sum)
+    {
+        find_parameters();
+    }
+
+    double getA()
+    {
+        return A;
+    }
+
+    double getV()
+    {
+        return V;
+    }
+
+    double getR()
+    {
+        return R;
+    }
+
+    double getD()
+    {
+        return D;
+    }
+
+    double getZ()
+    {
+        return Z;
+    }
+
+    double getB()
+    {
+        return B;
+    }
+
+    double find_parameters()
+    {
+        double A_acc=0.01;
+
+        cout<<endl<<"PROCESSING..."<<endl<<endl;
+
+        double Vt=0,At=A_acc;
+
+        while(calc_D(At,Vt)<=getD())
+        {
+            Vt++;
+            At=A_acc;
+
+            while(calc_R(At,Vt)<=getR())
+            {
+                At+=A_acc;
+            }
+        }
+        A=At;
+        V=Vt;
+
+        sigma2=getR()*((getA()/(getV()+1-getA()+getR()))+1-getR());
+        Z=sigma2/getR();
+
+
+        B=0.001;
+        B_ob=0.001;
+
+        V_ob_0=find_V(A,B,1)-getV();
+
+        V_ob_1=find_V(A,B*R/A,1)-getV();
+
+    }
+
+    double find_V(double At,double Et,double Vt)
+    {
+        if(Erlang(At,Vt)-Et<=0.00000001) return Vt;
+        if(Vt<=0) return 0;
+        if(Erlang(At,Vt)>Et) return find_V(At,Et,++Vt);
+        else return find_V(At,Et,--Vt);
+    }
+
+    double calc_D(double A,double V)
+    {
+        return getR()*((A/(V+1-A+getR()))-getR());
+    }
+
+    double calc_R(double A,double V)
+    {
+        return A*Erlang(A,V);
+    }
+
+    void disp_parameters()
+    {
+        cout<<"R: "<<getR()<<endl;
+        cout<<"D: "<<getD()<<endl;
+        cout<<"Z: "<<getZ()<<endl;
+        cout<<"A: "<<getA()<<endl;
+        cout<<"V: "<<getV()<<endl;
+        cout<<"B: "<<getB()<<endl;
+        cout<<"V_ob by B (whole network): "<<V_ob_0<<endl;
+        cout<<"V_ob by B_ob (sec bundle only): "<<V_ob_1<<endl;
+    }
+};
+
+int main()
+{
+    cout<<"MONITOROWANIE I OCENA WYDAJNOSCI SIECI PAKIETOWYCH"<<endl;
+    cout << "---------------METODA ERT---------------" << endl;
+    cout<<"LUKASZ CIESIELSKI"<<endl;
+    cout<<"POLITECHNIKA POZNANSKA V SEMESTR"<<endl<<endl;
+
+    double A,V,R_sum,D_sum=0,A_sec;
+    int k;
+
+    cout<<"Primary bundles: ";
+    cin>>k;
+
+    cout<<endl<<"Secondary offered traffic: ";
+    cin>>A_sec;
+    cout<<endl;
+
+    R_sum=A_sec;
+
+    Primary_Bundle *s[k];
+
+    for(int i=0;i<k;i++)
+    {
+        cout<<"A"<<i+1<<": ";
+        cin>>A;
+
+        cout<<"V"<<i+1<<": ";
+        cin>>V;
+
+        s[i]=new Primary_Bundle(A,V);
+
+        R_sum+=s[i]->getR();
+        D_sum+=s[i]->getD();
+    }
+
+    Secondary_Bundle *sec_b=new Secondary_Bundle(R_sum,D_sum);
+
+    sec_b->disp_parameters();
+
+    delete sec_b;
+    delete [] s;
+
+    return 0;
+}
